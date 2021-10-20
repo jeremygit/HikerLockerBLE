@@ -100,7 +100,7 @@ const createBLEDevice = (primaryServiceUUID) => {
       if (characteristic) {
         return characteristic;
       } else {
-        throw new Error('')
+        throw new Error('BLE Characteristic not found.');
       }
     } catch (err) {
       throw err;
