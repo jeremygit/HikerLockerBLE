@@ -1,4 +1,4 @@
-import { Grid, makeStyles } from '@material-ui/core';
+import { Grid, Toolbar, makeStyles } from '@material-ui/core';
 import { useAuth } from '../contexts/AuthContext';
 import { BLEConnectionState, useBLE } from '../contexts/BLEContext';
 import ConnectedScreen from './ConnectedScreen';
@@ -52,5 +52,21 @@ function ScreenRouter() {
     default:
       return null;
   }
+}
+
+export function ScreenSafeArea({children}) {
+
+  const screenStyles = useScreenStyles();
+
+  return (
+    <>
+      <Grid item className={screenStyles.row}>
+        <Toolbar/>
+      </Grid>
+      <Grid item>
+        {children}
+      </Grid>
+    </>
+  );
 }
 

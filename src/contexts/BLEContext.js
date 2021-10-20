@@ -35,11 +35,91 @@ const BLEContext = createContext();
 
 export const useBLE = () => useContext(BLEContext);
 
+
+const createBLEDevice = (primaryServiceUUID) => {
+
+  let device = null;
+  let deviceConnection = null;
+
+  const request = async () => {
+    try {
+      device = await navigator.bluetooth.requestDevice({
+        optionalServices: [ primaryServiceUUID ],
+        acceptAllDevices: true,
+      });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  const connect = async (disconnectCallback) => {
+    try {
+      deviceConnection = await device.gatt.connect();
+      device.addEventListener('gattserverdisconnected', () => {
+        disconnect();
+        if (disconnectCallback) disconnectCallback();
+      });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  const disconnect = () => {
+    try {
+      device.gatt.disconnect();
+      device = null;
+      deviceConnection = null;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  const scanAndConnect = async (disconnectCallback) => {
+    try {
+      await request();
+      await connect(disconnectCallback);
+    } catch (err) {
+      throw new Error('BLE failed to scan and connect');
+    }
+  }
+
+  const getCharacteristics = async () => {
+    try {
+      const primaryService = await deviceConnection.getPrimaryService(primaryServiceUUID);
+      const characteristics = await primaryService.getCharacteristics();
+      return characteristics;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  const getCharacteristicByUUID = async (uuid) => {
+    try {
+      const characteristics = await getCharacteristics();
+      const characteristic = characteristics.find(char => char.uuid === uuid);
+      if (characteristic) {
+        return characteristic;
+      } else {
+        throw new Error('')
+      }
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  return {
+    request,
+    connect,
+    disconnect,
+    scanAndConnect,
+    getCharacteristics,
+    getCharacteristicByUUID
+  }
+}
+
 export default function BLEProvider({ children }) {
 
-  const deviceRef = useRef();
-  const deviceServerRef = useRef();
-  const primaryServiceRef = useRef();
+  const bleRef = useRef(createBLEDevice(BLEPrimaryService));
   
   const [error, setError] = useState('');
   const [connectionState, setConnectionState] = useState(BLEConnectionState.Disconnected);
@@ -49,45 +129,35 @@ export default function BLEProvider({ children }) {
   const [responseData, setResponseData] = useState('');
 
   const disconnect = useCallback(() => {
-    if (deviceRef.current) {
+    try {
       setConnectionState(BLEConnectionState.Disconnected);
-      deviceRef.current.gatt.disconnect();
-      primaryServiceRef.current = null;
-      deviceServerRef.current = null;
-      deviceRef.current = null;
+      bleRef.current.disconnect();
+    } catch (err) {
+      return setError(err.message);
     }
   }, []);
 
   const connect = useCallback(async () => {
     try {
       setConnectionState(BLEConnectionState.Connecting);
-
-      deviceRef.current = await navigator.bluetooth.requestDevice({
-        optionalServices: [ BLEPrimaryService ],
-        acceptAllDevices: true,
+      await bleRef.current.scanAndConnect(() => {
+        setConnectionState(BLEConnectionState.Disconnected);
       });
-
-      deviceRef.current.addEventListener('gattserverdisconnected', () => {
-        disconnect();
-      });
-  
-      deviceServerRef.current = await deviceRef.current.gatt.connect();
-      primaryServiceRef.current = await deviceServerRef.current.getPrimaryService(BLEPrimaryService);
- 
       setConnectionState(BLEConnectionState.Connected);
     } catch (err) {
       setConnectionState(BLEConnectionState.Disconnected);
       throw new Error('BLE could not connect.');
     }
-  }, [disconnect]);
+  }, []);
 
   const refreshCharacteristics = useCallback(async () => {
-    if (primaryServiceRef.current) {
+    try {
       setCharacteristicsState(BLECharacteristicsState.Loading);
-      const chars = await primaryServiceRef.current.getCharacteristics();
+      const chars = await bleRef.current.getCharacteristics();
       setCharacteristics(chars);
       setCharacteristicsState(BLECharacteristicsState.Loaded);
-    } else {
+    } catch (err) {
+      // clear chars
       setCharacteristics([]);
       setCharacteristicsState(BLECharacteristicsState.None);
       throw new Error('BLE could not get characteristics.');
@@ -108,10 +178,6 @@ export default function BLEProvider({ children }) {
     }
   }, [connect, refreshCharacteristics]);
 
-  const getCharacteristic = useCallback((uuid) => {
-    return characteristics.find((char) => char.uuid === uuid);
-  }, [characteristics]);
-
   const handleBLEReadValueChanged = useCallback((evt) => {
     setTransferState(BLETransferState.Transferred);
     const decoder = new TextDecoder('utf-8');
@@ -128,8 +194,7 @@ export default function BLEProvider({ children }) {
     try {
       setTransferState(BLETransferState.Transferring);
       setResponseData('');
-      const char = getCharacteristic(BLECharacteristics.LogVisit);
-      if (!char) throw new Error('Log Visit characteristic not found');
+      const char = await bleRef.current.getCharacteristicByUUID(BLECharacteristics.LogVisit);
       const userId = BLEEncodeString(data);
       char.oncharacteristicvaluechanged = handleBLEReadValueChanged;
       await char.writeValue(userId);
@@ -138,7 +203,7 @@ export default function BLEProvider({ children }) {
       setError(err.message);
       setTransferState(BLETransferState.Idle);
     }
-  }, [getCharacteristic, handleBLEReadValueChanged]);
+  }, [handleBLEReadValueChanged]);
 
   const clearError = useCallback(() => {
     setError('');
@@ -149,6 +214,7 @@ export default function BLEProvider({ children }) {
       value={{
         connectionState,
         characteristicsState,
+        characteristics,
         transferState,
         responseData,
         error,
@@ -160,5 +226,5 @@ export default function BLEProvider({ children }) {
     >
       { children }
     </BLEContext.Provider>
-  )
+  );
 }
