@@ -1,6 +1,7 @@
 import { Grid, makeStyles, Card, CardContent, Typography } from '@material-ui/core';
 import { useAuth } from '../contexts/AuthContext';
 import { BLECharacteristics, useBLE } from '../contexts/BLEContext';
+import { useModal, ModalTypes } from '../contexts/ModalContext';
 import { BLECharacteristicsMenuTitles, BLECharacteristicsIcons } from '../constants/BLEConstants';
 import { ScreenSafeArea } from './Screens';
 
@@ -14,6 +15,7 @@ export default function ConnectedScreen() {
   
   const connectedScreenStyles = useConnectedScreenStyle();
 
+  const modal = useModal();
   const ble = useBLE();
   const auth = useAuth();
 
@@ -23,13 +25,18 @@ export default function ConnectedScreen() {
     '#c9223e'
   ];
 
-  const onClickCharacteristic = (char) => () => {
+  const performCharacteristic = (char) => {
     switch (char) {
       case BLECharacteristics.LogVisit:
         ble.logVisit(auth.token);
         break;
       default: // do nothing
     }
+  }
+
+  const onClickCharacteristic = (char) => () => {
+    performCharacteristic(char);
+    modal.showModal(ModalTypes.BLEResponseData);
   }
 
   return (

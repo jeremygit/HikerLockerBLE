@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 // Helpers
 const BLEEncodeString = (str) => {
@@ -66,7 +66,7 @@ const createBLEDevice = (primaryServiceUUID) => {
 
   const disconnect = () => {
     try {
-      device.gatt.disconnect();
+      device?.gatt.disconnect();
       device = null;
       deviceConnection = null;
     } catch (err) {
@@ -119,7 +119,7 @@ const createBLEDevice = (primaryServiceUUID) => {
 
 export default function BLEProvider({ children }) {
 
-  const bleRef = useRef(createBLEDevice(BLEPrimaryService));
+  const bleRef = useRef();
   
   const [error, setError] = useState('');
   const [connectionState, setConnectionState] = useState(BLEConnectionState.Disconnected);
@@ -127,6 +127,10 @@ export default function BLEProvider({ children }) {
   const [characteristics, setCharacteristics] = useState([]);
   const [transferState, setTransferState] = useState(BLETransferState.Idle);
   const [responseData, setResponseData] = useState('');
+
+  useEffect(() => {
+    bleRef.current = createBLEDevice(BLEPrimaryService);
+  }, []);
 
   const disconnect = useCallback(() => {
     try {
@@ -183,7 +187,7 @@ export default function BLEProvider({ children }) {
     const decoder = new TextDecoder('utf-8');
     const jsonStr = decoder.decode(evt.target.value);
     const jsonData =  JSON.parse(jsonStr);
-    alert(JSON.stringify(jsonData));
+    // alert(JSON.stringify(jsonData));
     setResponseData(jsonData);
     setTransferState(BLETransferState.Idle);
     disconnect();
@@ -209,6 +213,10 @@ export default function BLEProvider({ children }) {
     setError('');
   }, []);
 
+  const clearResponseData = useCallback(() => {
+    setResponseData(null);
+  }, []);
+
   return (
     <BLEContext.Provider
       value={{
@@ -221,7 +229,8 @@ export default function BLEProvider({ children }) {
         scanToConnect,
         disconnect,
         logVisit,
-        clearError
+        clearError,
+        clearResponseData
       }}
     >
       { children }

@@ -4,6 +4,7 @@ import { Providers } from './store/Providers';
 import { makeStyles } from '@material-ui/core';
 import Header from './components/Header';
 import Screens from './components/Screens';
+import ModalDisplay from './components/ModalDisplay';
 
 const useAppStyles = makeStyles((theme) => ({
   container: {
@@ -21,6 +22,7 @@ function App() {
         <div className={`App ${appStyles.container}`}>
           <Header/>
           <Screens/>
+          <ModalDisplay/>
         </div>
       </Providers>
     </AuthProvider>
