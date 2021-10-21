@@ -4,9 +4,9 @@ import { ModalComponents } from '../constants/ModalConstants';
 export default function ModalDisplay() {
   const modal = useModal();
 
-  if (!modal.modalShowing && !modal.modalType) {
-    return (null);
+  if (modal.modalShowing && modal.modalType) {
+    return ModalComponents[modal.modalType];
   }
 
-  return ModalComponents[modal.modalType];
+  return (null);  
 }
