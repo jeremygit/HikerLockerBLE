@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { useModal } from '../contexts/ModalContext';
 import { ModalComponents } from '../constants/ModalConstants';
 import { Drawer } from '@material-ui/core';
@@ -21,12 +20,16 @@ export function ModalLoadedDisplay({children, loaded}) {
   }
 }
 
-export function ModalContainer({ children, onClose}) {
+export function ModalContainer({ children, onCloseCallback}) {
+  const modal = useModal();
   return (
     <Drawer
       anchor="bottom"
       open={true}
-      onClose={onClose}
+      onClose={() => {
+        modal.hideModal();
+        if (onCloseCallback) onCloseCallback();
+      }}
     >
       { children }
     </Drawer>
