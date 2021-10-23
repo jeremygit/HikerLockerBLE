@@ -6,7 +6,7 @@ export default function BLEResponseDataModal() {
   
   const ble = useBLE();
 
-  if (ble.transferState === BLETransferState.Idle) {
+  if (ble.transferState === BLETransferState.Idle && ble.responseData) {
     return (
       <ModalContainer
         onClose={() => {

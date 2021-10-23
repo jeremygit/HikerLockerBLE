@@ -56,7 +56,7 @@ const createBLEDevice = (primaryServiceUUID) => {
     try {
       deviceConnection = await device.gatt.connect();
       device.addEventListener('gattserverdisconnected', () => {
-        disconnect();
+        deviceCleanup();
         if (disconnectCallback) disconnectCallback();
       });
     } catch (err) {
@@ -67,8 +67,6 @@ const createBLEDevice = (primaryServiceUUID) => {
   const disconnect = () => {
     try {
       device?.gatt.disconnect();
-      device = null;
-      deviceConnection = null;
     } catch (err) {
       throw err;
     }
@@ -105,6 +103,11 @@ const createBLEDevice = (primaryServiceUUID) => {
     } catch (err) {
       throw err;
     }
+  }
+
+  const deviceCleanup = () => {
+    device = null;
+    deviceConnection = null;
   }
 
   return {
